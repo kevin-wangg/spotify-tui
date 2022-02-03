@@ -28,7 +28,13 @@ pub fn handler(key: Key, app: &mut App) {
         &app.track_table.tracks,
         Some(app.track_table.selected_index),
       );
-      app.track_table.selected_index = next_index;
+      if next_index != app.track_table.tracks.len() - 1 {
+        app.track_table.selected_index = next_index;
+      }
+      else {
+        scroll_up(app);
+        app.track_table.selected_index = next_index;
+      }
     }
     k if common_key_events::high_event(k) => {
       let next_index = common_key_events::on_high_press_handler();
@@ -51,52 +57,7 @@ pub fn handler(key: Key, app: &mut App) {
     }
     // Scroll up
     k if k == app.user_config.keys.previous_page => {
-      match &app.track_table.context {
-        Some(context) => match context {
-          TrackTableContext::MyPlaylists => {
-            if let (Some(playlists), Some(selected_playlist_index)) =
-              (&app.playlists, &app.selected_playlist_index)
-            {
-              if app.playlist_offset >= app.large_search_limit {
-                app.playlist_offset -= app.large_search_limit;
-              };
-              if let Some(selected_playlist) =
-                playlists.items.get(selected_playlist_index.to_owned())
-              {
-                let playlist_id = selected_playlist.id.to_owned();
-                app.dispatch(IoEvent::GetPlaylistTracks(playlist_id, app.playlist_offset));
-              }
-            };
-          }
-          TrackTableContext::RecommendedTracks => {}
-          TrackTableContext::SavedTracks => {
-            app.get_current_user_saved_tracks_previous();
-          }
-          TrackTableContext::AlbumSearch => {}
-          TrackTableContext::PlaylistSearch => {}
-          TrackTableContext::MadeForYou => {
-            let (playlists, selected_playlist_index) = (
-              &app
-                .library
-                .made_for_you_playlists
-                .get_results(Some(0))
-                .unwrap(),
-              app.made_for_you_index,
-            );
-            if app.made_for_you_offset >= app.large_search_limit {
-              app.made_for_you_offset -= app.large_search_limit;
-            }
-            if let Some(selected_playlist) = playlists.items.get(selected_playlist_index) {
-              let playlist_id = selected_playlist.id.to_owned();
-              app.dispatch(IoEvent::GetMadeForYouPlaylistTracks(
-                playlist_id,
-                app.made_for_you_offset,
-              ));
-            }
-          }
-        },
-        None => {}
-      };
+      scroll_up(app);
     }
     Key::Char('s') => handle_save_track_event(app),
     Key::Char('S') => play_random_song(app),
@@ -111,6 +72,54 @@ pub fn handler(key: Key, app: &mut App) {
   }
 }
 
+fn scroll_up(app: &mut App) {
+  match &app.track_table.context {
+    Some(context) => match context {
+      TrackTableContext::MyPlaylists => {
+        if let (Some(playlists), Some(selected_playlist_index)) =
+          (&app.playlists, &app.selected_playlist_index)
+        {
+          if app.playlist_offset >= app.large_search_limit {
+            app.playlist_offset -= app.large_search_limit;
+          };
+          if let Some(selected_playlist) =
+            playlists.items.get(selected_playlist_index.to_owned())
+          {
+            let playlist_id = selected_playlist.id.to_owned();
+            app.dispatch(IoEvent::GetPlaylistTracks(playlist_id, app.playlist_offset));
+          }
+        };
+      }
+      TrackTableContext::RecommendedTracks => {}
+      TrackTableContext::SavedTracks => {
+        app.get_current_user_saved_tracks_previous();
+      }
+      TrackTableContext::AlbumSearch => {}
+      TrackTableContext::PlaylistSearch => {}
+      TrackTableContext::MadeForYou => {
+        let (playlists, selected_playlist_index) = (
+          &app
+            .library
+            .made_for_you_playlists
+            .get_results(Some(0))
+            .unwrap(),
+          app.made_for_you_index,
+        );
+        if app.made_for_you_offset >= app.large_search_limit {
+          app.made_for_you_offset -= app.large_search_limit;
+        }
+        if let Some(selected_playlist) = playlists.items.get(selected_playlist_index) {
+          let playlist_id = selected_playlist.id.to_owned();
+          app.dispatch(IoEvent::GetMadeForYouPlaylistTracks(
+            playlist_id,
+            app.made_for_you_offset,
+          ));
+        }
+      }
+    },
+    None => {}
+  };
+}
 fn scroll_down(app: &mut App) {
   match &app.track_table.context {
     Some(context) => match context {
